@@ -16,6 +16,31 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+API_SECRET = os.environ.get("API_SECRET")
+
+from fastapi import Request, status
+from fastapi.responses import JSONResponse
+
+@app.middleware("http")
+async def check_api_header(request: Request, call_next):
+    # Skip check for root endpoint (health check)
+    if request.url.path == "/":
+        return await call_next(request)
+
+    if not API_SECRET:
+        print("Warning: API_SECRET not set in environment. Skipping security check.")
+        return await call_next(request)
+
+    client_secret = request.headers.get("x-api-secret")
+    if client_secret != API_SECRET:
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={"detail": "Invalid or missing API Secret"}
+        )
+    
+    response = await call_next(request)
+    return response
+
 class BirthDetails(BaseModel):
     year: int
     month: int
