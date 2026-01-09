@@ -198,17 +198,37 @@ def calculate_jathagam(y, m, d, h, mn, lat, lon):
     for name, bid in bodies.items():
         res, ret_flags = swe.calc_ut(jd, bid, flags)
         long = res[0]
-        planet_positions.append({"name": name, "longitude": long, "rasi_idx": int(long / 30) % 12, "degrees": long % 30})
+        rasi_idx = int(long / 30) % 12
+        planet_positions.append({
+            "name": name, 
+            "longitude": long, 
+            "rasi_idx": rasi_idx, 
+            "rashi": RASHI_NAMES[rasi_idx]["en"],
+            "degrees": long % 30
+        })
         n_sign_idx = calculate_navamsa_sign_from_degree(long)
         navamsa_planets.append({"planet": name, "rasi_idx": n_sign_idx, "sign": RASHI_NAMES[n_sign_idx]["en"]})
         if name == "Rahu":
             k_long = (long + 180) % 360
-            planet_positions.append({"name": "Ketu", "longitude": k_long, "rasi_idx": int(k_long / 30) % 12, "degrees": k_long % 30})
+            k_rasi_idx = int(k_long / 30) % 12
+            planet_positions.append({
+                "name": "Ketu", 
+                "longitude": k_long, 
+                "rasi_idx": k_rasi_idx, 
+                "rashi": RASHI_NAMES[k_rasi_idx]["en"],
+                "degrees": k_long % 30
+            })
             kn_sign_idx = calculate_navamsa_sign_from_degree(k_long)
             navamsa_planets.append({"planet": "Ketu", "rasi_idx": kn_sign_idx, "sign": RASHI_NAMES[kn_sign_idx]["en"]})
 
     houses, ascmc = swe.houses_ex(jd, lat, lon, b'W', flags)
     lagna_long = ascmc[0]
+    
+    # Calculate houses for main chart
+    lagna_rasi_idx = int(lagna_long / 30) % 12
+    for p in planet_positions:
+        p["house"] = (p["rasi_idx"] - lagna_rasi_idx + 12) % 12 + 1
+
     nav_lagna_idx = calculate_navamsa_sign_from_degree(lagna_long)
     for p in navamsa_planets:
         p["house"] = (p["rasi_idx"] - nav_lagna_idx + 12) % 12 + 1
