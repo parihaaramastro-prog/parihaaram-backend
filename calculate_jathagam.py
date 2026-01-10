@@ -185,20 +185,42 @@ def calculate_vimshottari_hierarchy(birth_dt, moon_long):
 def get_house_from_cusps(longitude, cusps):
     """
     Determine house number based on longitude and house cusps (Placidus/Bhava).
-    cusps index 1 is House 1 start.
+    Handles both 13-element (swisseph standard, 1-based) and 12-element (0-based) tuples.
     """
-    long_deg = float(longitude) % 360
-    for i in range(1, 13):
-        start_deg = cusps[i]
-        end_deg = cusps[i + 1] if i < 12 else cusps[1]
+    if not cusps:
+        return 1
         
-        if start_deg < end_deg:
-            if start_deg <= long_deg < end_deg:
-                return i
-        else:
-            # Cusp crosses 0/360 boundary
-            if start_deg <= long_deg or long_deg < end_deg:
-                return i
+    long_deg = float(longitude) % 360
+    n = len(cusps)
+    
+    # Standard swisseph returns 13 values (0th is dummy) -> range 1..12
+    if n >= 13:
+        for i in range(1, 13):
+            start_deg = cusps[i]
+            next_i = i + 1 if i < 12 else 1
+            end_deg = cusps[next_i]
+            
+            if start_deg < end_deg:
+                if start_deg <= long_deg < end_deg:
+                    return i
+            else:
+                if start_deg <= long_deg or long_deg < end_deg:
+                    return i
+    # Some wrappers might return exactly 12 values -> range 0..11
+    elif n == 12:
+        for i in range(0, 12):
+            start_deg = cusps[i]
+            next_i = i + 1 if i < 11 else 0
+            end_deg = cusps[next_i]
+            
+            house_num = i + 1
+            if start_deg < end_deg:
+                if start_deg <= long_deg < end_deg:
+                    return house_num
+            else:
+                if start_deg <= long_deg or long_deg < end_deg:
+                    return house_num
+                    
     return 1
 
 def calculate_jathagam(y, m, d, h, mn, lat, lon):
