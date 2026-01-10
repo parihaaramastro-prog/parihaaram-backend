@@ -231,7 +231,7 @@ def calculate_jathagam(y, m, d, h, mn, lat, lon):
     bodies = {
         "Sun": swe.SUN, "Moon": swe.MOON, "Mars": swe.MARS, 
         "Mercury": swe.MERCURY, "Jupiter": swe.JUPITER, 
-        "Venus": swe.VENUS, "Saturn": swe.SATURN, "Rahu": swe.TRUE_NODE
+        "Venus": swe.VENUS, "Saturn": swe.SATURN, "Rahu": swe.MEAN_NODE
     }
     
     planet_positions = []
