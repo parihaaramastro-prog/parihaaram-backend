@@ -182,6 +182,25 @@ def calculate_vimshottari_hierarchy(birth_dt, moon_long):
         
     return mahadashas
 
+def get_house_from_cusps(longitude, cusps):
+    """
+    Determine house number based on longitude and house cusps (Placidus/Bhava).
+    cusps index 1 is House 1 start.
+    """
+    long_deg = float(longitude) % 360
+    for i in range(1, 13):
+        start_deg = cusps[i]
+        end_deg = cusps[i + 1] if i < 12 else cusps[1]
+        
+        if start_deg < end_deg:
+            if start_deg <= long_deg < end_deg:
+                return i
+        else:
+            # Cusp crosses 0/360 boundary
+            if start_deg <= long_deg or long_deg < end_deg:
+                return i
+    return 1
+
 def calculate_jathagam(y, m, d, h, mn, lat, lon):
     swe.set_sid_mode(swe.SIDM_LAHIRI)
     jd = swe.julday(y, m, d, h + mn/60.0)
@@ -195,39 +214,49 @@ def calculate_jathagam(y, m, d, h, mn, lat, lon):
     
     planet_positions = []
     navamsa_planets = []
+    
+    # Calculate houses first to get cusps (Placidus system 'P' for degree-based accuracy)
+    # Using 'P' (Placidus) is common for checking which Bhava a planet falls into based on degree.
+    houses, ascmc = swe.houses_ex(jd, lat, lon, b'P', flags)
+    lagna_long = ascmc[0]
+    
     for name, bid in bodies.items():
         res, ret_flags = swe.calc_ut(jd, bid, flags)
         long = res[0]
         rasi_idx = int(long / 30) % 12
+        
+        # Calculate house based on degree and cusps
+        house_num = get_house_from_cusps(long, houses)
+        
         planet_positions.append({
             "name": name, 
             "longitude": long, 
             "rasi_idx": rasi_idx, 
             "rashi": RASHI_NAMES[rasi_idx]["en"],
-            "degrees": long % 30
+            "degrees": long % 30,
+            "house": house_num
         })
         n_sign_idx = calculate_navamsa_sign_from_degree(long)
         navamsa_planets.append({"planet": name, "rasi_idx": n_sign_idx, "sign": RASHI_NAMES[n_sign_idx]["en"]})
         if name == "Rahu":
             k_long = (long + 180) % 360
             k_rasi_idx = int(k_long / 30) % 12
+            k_house_num = get_house_from_cusps(k_long, houses)
             planet_positions.append({
                 "name": "Ketu", 
                 "longitude": k_long, 
                 "rasi_idx": k_rasi_idx, 
                 "rashi": RASHI_NAMES[k_rasi_idx]["en"],
-                "degrees": k_long % 30
+                "degrees": k_long % 30,
+                "house": k_house_num
             })
             kn_sign_idx = calculate_navamsa_sign_from_degree(k_long)
             navamsa_planets.append({"planet": "Ketu", "rasi_idx": kn_sign_idx, "sign": RASHI_NAMES[kn_sign_idx]["en"]})
-
-    houses, ascmc = swe.houses_ex(jd, lat, lon, b'W', flags)
-    lagna_long = ascmc[0]
     
-    # Calculate houses for main chart
+    # Lagna details
     lagna_rasi_idx = int(lagna_long / 30) % 12
-    for p in planet_positions:
-        p["house"] = (p["rasi_idx"] - lagna_rasi_idx + 12) % 12 + 1
+    # No longer loop to assign old style houses
+
 
     nav_lagna_idx = calculate_navamsa_sign_from_degree(lagna_long)
     for p in navamsa_planets:
